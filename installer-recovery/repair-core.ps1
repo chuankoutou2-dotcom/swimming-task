@@ -26,9 +26,12 @@ function Verify-SwimBackup($data,$backup,$manifest,$expectedOriginal){
  Assert-Swim ($names.Count-eq 3 -and @($names|Where-Object {$_ -notin @('data','original-uninstaller.exe','data-hashes.json')}).Count-eq 0) '前回のバックアップは未完了か管理外ファイルがあります。削除せず停止します。';
  Safe-Swim (Join-Path $backup 'original-uninstaller.exe');Safe-Swim (Join-Path $backup 'data-hashes.json');
  Assert-Swim ((Hash-Swim (Join-Path $backup 'original-uninstaller.exe'))-eq $expectedOriginal) '前回の元EXEバックアップが一致しません。';
- $saved=@(Get-Content -LiteralPath (Join-Path $backup 'data-hashes.json') -Raw -Encoding UTF8|ConvertFrom-Json);
+ # PS 5.1 emits a JSON array as one pipeline object. Do not wrap that pipeline in @().
+ $saved=ConvertFrom-Json -InputObject (Get-Content -LiteralPath (Join-Path $backup 'data-hashes.json') -Raw -Encoding UTF8);
  $copied=@(Manifest-Swim (Join-Path $backup 'data'));
- Assert-Swim ((Same-SwimManifest $saved $manifest) -and (Same-SwimManifest $copied $manifest) -and (Same-SwimManifest @(Manifest-Swim $data) $manifest)) '現在のデータと前回のバックアップが違います。どちらも変更せず停止します。';
+ Assert-Swim (Same-SwimManifest $saved $manifest) '現在のデータと前回のバックアップ記録が違います。どちらも変更せず停止します。';
+ Assert-Swim (Same-SwimManifest $copied $manifest) 'バックアップ内の実ファイルが記録と違います。どちらも変更せず停止します。';
+ Assert-Swim (Same-SwimManifest @(Manifest-Swim $data) $manifest) 'バックアップ確認中に現在のデータが変わりました。どちらも変更せず停止します。';
 };
 function Backup-Swim($data,$backup,$target,$manifest,$expectedOriginal){
  if(Test-Path -LiteralPath $backup){Verify-SwimBackup $data $backup $manifest $expectedOriginal;return};
