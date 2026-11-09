@@ -19,6 +19,13 @@ function New-Fixture($name){
 function Repair-Fixture($f,$confirmed=$true){Repair-Swim $f.data $f.backup $f.target $f.stage $f.rollback $f.fixed $f.originalHash $f.fixedHash $confirmed}
 function Case($name,[scriptblock]$body){& $body;$script:passed++;Write-Output ('PASS '+$name)}
 try {
+ Case 'Production combined repair script parses under Windows PowerShell 5.1 without executing guards' {
+  $core=[IO.File]::ReadAllText((Join-Path $PSScriptRoot 'repair-core.ps1'),[Text.Encoding]::UTF8)
+  $entry=[IO.File]::ReadAllText((Join-Path $PSScriptRoot 'repair-entry.ps1'),[Text.Encoding]::UTF8)
+  $scriptText='& {'+"`n"+$core+"`n"+$entry+"`n}`n`n";$tokens=$null;$errors=$null
+  [System.Management.Automation.Language.Parser]::ParseInput($scriptText,[ref]$tokens,[ref]$errors)|Out-Null
+  Check ($errors.Count-eq 0) ('Production parse errors: '+($errors|Out-String))
+ }
  Case 'PowerShell 5.1 reproduces the null backup argument failure' {
   $f=New-Fixture 'null-argument';Stage-Swim $f.stage $f.fixed $f.fixedHash;$failed=$false
   try{[IO.File]::Replace($f.stage,$f.target,$null)}catch{$failed=$true;Write-Output ('OLD_ERROR '+$_.Exception.Message)}
@@ -74,7 +81,7 @@ Write-Output 'LAUNCHER_SUCCESS'
   [IO.File]::WriteAllText((Join-Path $kit 'repair.ps1'),$entry,(New-Object Text.UTF8Encoding($false)))
   $start=New-Object Diagnostics.ProcessStartInfo;$start.FileName=$env:ComSpec;$start.Arguments='/d /c '+[char]34+[char]34+(Join-Path $kit 'repair.cmd')+[char]34+[char]34;$start.UseShellExecute=$false;$start.RedirectStandardInput=$true;$start.RedirectStandardOutput=$true;$start.RedirectStandardError=$true
   $start.EnvironmentVariables['SWIM_FIXTURE_ROOT']=$f.base;$start.EnvironmentVariables['SWIM_ORIGINAL_HASH']=$f.originalHash;$start.EnvironmentVariables['SWIM_FIXED_HASH']=$f.fixedHash
-  $p=New-Object Diagnostics.Process;$p.StartInfo=$start;Check ($p.Start()) 'CMD not started';$p.StandardInput.WriteLine('REPAIR');$p.StandardInput.WriteLine('');$p.StandardInput.Close();Check ($p.WaitForExit(30000)) 'CMD timeout';$output=$p.StandardOutput.ReadToEnd();$errorText=$p.StandardError.ReadToEnd();Write-Output $output;Check ($p.ExitCode-eq 0) ('CMD failed '+$errorText);Check ($output.Contains('LAUNCHER_SUCCESS')) ('No launcher success '+$errorText);Check ((Hash-Swim $f.target)-eq $f.fixedHash) 'CMD did not repair'
+  $p=New-Object Diagnostics.Process;$p.StartInfo=$start;Check ($p.Start()) 'CMD not started';$p.StandardInput.WriteLine('REPAIR');$p.StandardInput.WriteLine('');$p.StandardInput.Close();Check ($p.WaitForExit(30000)) 'CMD timeout';$output=$p.StandardOutput.ReadToEnd();$errorText=$p.StandardError.ReadToEnd();Write-Output $output;Check ($p.ExitCode-eq 0) ('CMD failed '+$errorText);Check ($output.Contains('LAUNCHER_SUCCESS')) ('No launcher success '+$errorText);Check ($output.Contains('PREVIEW 日本語')) 'Japanese preview text was corrupted';Check ((Hash-Swim $f.target)-eq $f.fixedHash) 'CMD did not repair'
  }
  Write-Output ('RESULT '+$passed+' PASS; Windows PowerShell '+$PSVersionTable.PSVersion.ToString()+'; CLR '+[Environment]::Version)
 } finally {
