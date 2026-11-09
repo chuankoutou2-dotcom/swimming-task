@@ -1,0 +1,35 @@
+name: バグ報告
+ description: 不具合を報告する
+ title: "[バグ] "
+ labels: [bug]
+ body:
+  - type: textarea
+    id: summary
+    attributes:
+      label: 概要
+      description: 発生している問題を記載してください。
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 再現手順
+      description: 問題を再現する手順を記載してください。
+      placeholder: |
+        1. ...
+        2. ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 期待する動作
+      validations:
+        required: false
+  - type: textarea
+    id: environment
+    attributes:
+      label: 環境情報
+      description: OS、ブラウザー、バージョンなど
+      validations:
+        required: false
