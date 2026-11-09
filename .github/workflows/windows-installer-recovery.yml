@@ -1,0 +1,17 @@
+name: Windows installer recovery
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  windows-powershell-51:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+      - name: Real Windows PowerShell 5.1 file replacement and resume tests
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          if ($PSVersionTable.PSVersion.Major -ne 5) { throw 'Expected Windows PowerShell 5.1' }
+          & .\installer-recovery\windows-repair.test.ps1
